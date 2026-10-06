@@ -219,4 +219,4 @@ if (require.main === module) {
   tcpServer.listen(TCP_PORT, () => console.log(`Servidor TCP escuchando en puerto ${TCP_PORT}`));
 }
 
-module.exports = { app, db };
+module.exports = { app, db, tcpServer };
