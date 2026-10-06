@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno y credenciales
+.env
+*.pem
+*.key
+
+# Base de datos y respaldos
+*.db
+database.db
+backup-*.db
+
+# Cobertura de pruebas
+coverage/
+
+# Artefactos de Jest / scratch
+jest-results*.json
+
+# Logs
+npm-debug.log
+*.log
+
+# Reportes y documentos (se entregan por separado, no van en el repo de código)
+*.docx
+*.pdf
+
+# Carpeta de trabajo de Claude Code (no es parte del proyecto)
+.claude/
+.scratch_report/
