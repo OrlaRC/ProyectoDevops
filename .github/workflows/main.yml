@@ -63,10 +63,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/webapp:latest
-            docker stop webapp-container || true
-            docker rm webapp-container || true
-            docker run -d \
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/webapp:latest
+            sudo docker stop webapp-container || true
+            sudo docker rm webapp-container || true
+            sudo docker run -d \
               -p 80:80 \
               -p 6061:6061 \
               --restart unless-stopped \
