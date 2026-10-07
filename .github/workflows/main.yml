@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: Tests y cobertura
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
 
   build-and-push:
     name: Build y publicar en Docker Hub
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -52,23 +52,30 @@ jobs:
 
   deploy:
     name: Desplegar en AWS EC2
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Conectar por SSH y actualizar el contenedor
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/webapp:latest
-            sudo docker stop webapp-container || true
-            sudo docker rm webapp-container || true
-            sudo docker run -d \
-              -p 80:80 \
-              -p 6061:6061 \
-              --restart unless-stopped \
-              --name webapp-container \
-              ${{ secrets.DOCKERHUB_USERNAME }}/webapp:latest
+        shell: powershell
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          $keyPath = Join-Path $env:RUNNER_TEMP "ec2_key.pem"
+          [System.IO.File]::WriteAllText($keyPath, $env:EC2_SSH_KEY -replace "`r`n", "`n")
+
+          # Restringir permisos del archivo de la llave (igual que al usarla manualmente)
+          icacls $keyPath /inheritance:r | Out-Null
+          icacls $keyPath /grant:r "$($env:USERNAME):(R)" | Out-Null
+
+          $remoteCommand = "sudo docker pull $env:DOCKERHUB_USERNAME/webapp:latest && " +
+            "(sudo docker stop webapp-container || true) && " +
+            "(sudo docker rm webapp-container || true) && " +
+            "sudo docker run -d -p 80:80 -p 6061:6061 --restart unless-stopped --name webapp-container $env:DOCKERHUB_USERNAME/webapp:latest"
+
+          ssh -o StrictHostKeyChecking=no -i $keyPath "ubuntu@$env:EC2_HOST" $remoteCommand
+          if ($LASTEXITCODE -ne 0) { throw "El despliegue por SSH fallo con codigo $LASTEXITCODE" }
+
+          Remove-Item $keyPath -Force
